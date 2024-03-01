@@ -482,7 +482,7 @@ fn process_items<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
     items
 }
 
-fn process_new_items(items: &Vec<ReportItem>) -> Vec<ChangeItem> {
+fn process_new_items(items: &[ReportItem]) -> Vec<ChangeItem> {
     items
         .iter()
         .map(|f| ChangeItem { name: f.name.clone(), from: None, to: Some(ChangeItemInfo::from(f)) })
@@ -497,9 +497,7 @@ fn read_report(path: &Path) -> Result<Report> {
 }
 
 fn serialize_hex<S>(x: &Option<u64>, s: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
+where S: serde::Serializer {
     if let Some(x) = x {
         s.serialize_str(&format!("{:#X}", x))
     } else {
@@ -508,9 +506,7 @@ where
 }
 
 fn deserialize_hex<'de, D>(d: D) -> Result<Option<u64>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
+where D: serde::Deserializer<'de> {
     use serde::Deserialize;
     let s = String::deserialize(d)?;
     if s.is_empty() {
