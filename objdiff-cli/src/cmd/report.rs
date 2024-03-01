@@ -41,7 +41,7 @@ pub struct GenerateArgs {
     /// Output JSON file
     output: Option<PathBuf>,
     #[argp(switch, short = 'd')]
-    /// Deduplicate global and weak symbols
+    /// Deduplicate global and weak symbols (runs single-threaded)
     deduplicate: bool,
 }
 
@@ -86,6 +86,7 @@ struct ReportUnit {
     module_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     module_id: Option<u32>,
+    sections: Vec<ReportSection>,
     functions: Vec<ReportFunction>,
 }
 
@@ -254,9 +255,17 @@ fn report_object(
     };
     let obj = target.as_ref().or(base.as_ref()).unwrap();
     for section in &obj.sections {
+        unit.sections.push(ReportSection {
+            name: section.name.clone(),
+            fuzzy_match_percent: section.match_percent,
+            total_size: section.size,
+            address: section.virtual_address,
+        });
+
         if section.kind != ObjSectionKind::Code {
             continue;
         }
+
         for symbol in &section.symbols {
             if symbol.size == 0 {
                 continue;
