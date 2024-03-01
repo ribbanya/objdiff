@@ -80,19 +80,33 @@ struct ReportUnit {
     matched_size: u64,
     total_functions: u32,
     matched_functions: u32,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     complete: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     module_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     module_id: Option<u32>,
     functions: Vec<ReportFunction>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+struct ReportSection {
+    name: String,
+    fuzzy_match_percent: f32,
+    total_size: u64,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_hex",
+        deserialize_with = "deserialize_hex"
+    )]
+    address: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 struct ReportFunction {
     name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     demangled_name: Option<String>,
     #[serde(
         default,
@@ -472,7 +486,9 @@ fn read_report(path: &Path) -> Result<Report> {
 }
 
 fn serialize_hex<S>(x: &Option<u64>, s: S) -> Result<S::Ok, S::Error>
-where S: serde::Serializer {
+where
+    S: serde::Serializer,
+{
     if let Some(x) = x {
         s.serialize_str(&format!("{:#X}", x))
     } else {
@@ -481,7 +497,9 @@ where S: serde::Serializer {
 }
 
 fn deserialize_hex<'de, D>(d: D) -> Result<Option<u64>, D::Error>
-where D: serde::Deserializer<'de> {
+where
+    D: serde::Deserializer<'de>,
+{
     use serde::Deserialize;
     let s = String::deserialize(d)?;
     if s.is_empty() {
