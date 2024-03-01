@@ -86,26 +86,12 @@ struct ReportUnit {
     module_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     module_id: Option<u32>,
-    sections: Vec<ReportSection>,
-    functions: Vec<ReportFunction>,
+    sections: Vec<ReportItem>,
+    functions: Vec<ReportItem>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-struct ReportSection {
-    name: String,
-    fuzzy_match_percent: f32,
-    total_size: u64,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        serialize_with = "serialize_hex",
-        deserialize_with = "deserialize_hex"
-    )]
-    address: Option<u64>,
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-struct ReportFunction {
+struct ReportItem {
     name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     demangled_name: Option<String>,
@@ -255,10 +241,11 @@ fn report_object(
     };
     let obj = target.as_ref().or(base.as_ref()).unwrap();
     for section in &obj.sections {
-        unit.sections.push(ReportSection {
+        unit.sections.push(ReportItem {
             name: section.name.clone(),
+            demangled_name: None,
             fuzzy_match_percent: section.match_percent,
-            total_size: section.size,
+            size: section.size,
             address: section.virtual_address,
         });
 
@@ -292,7 +279,7 @@ fn report_object(
             if match_percent == 100.0 {
                 unit.matched_size += symbol.size;
             }
-            unit.functions.push(ReportFunction {
+            unit.functions.push(ReportItem {
                 name: symbol.name.clone(),
                 demangled_name: symbol.demangled_name.clone(),
                 size: symbol.size,
@@ -372,11 +359,11 @@ struct ChangeUnit {
     name: String,
     from: Option<ChangeInfo>,
     to: Option<ChangeInfo>,
-    functions: Vec<ChangeFunction>,
+    functions: Vec<ChangeItem>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-struct ChangeFunction {
+struct ChangeItem {
     name: String,
     from: Option<ChangeFunctionInfo>,
     to: Option<ChangeFunctionInfo>,
@@ -388,8 +375,8 @@ struct ChangeFunctionInfo {
     size: u64,
 }
 
-impl From<&ReportFunction> for ChangeFunctionInfo {
-    fn from(value: &ReportFunction) -> Self {
+impl From<&ReportItem> for ChangeFunctionInfo {
+    fn from(value: &ReportItem) -> Self {
         Self { fuzzy_match_percent: value.fuzzy_match_percent, size: value.size }
     }
 }
@@ -414,14 +401,14 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 let curr_func_info = curr_func.map(ChangeFunctionInfo::from);
                 if let Some(curr_func_info) = curr_func_info {
                     if prev_func_info != curr_func_info {
-                        functions.push(ChangeFunction {
+                        functions.push(ChangeItem {
                             name: prev_func.name.clone(),
                             from: Some(prev_func_info),
                             to: Some(curr_func_info),
                         });
                     }
                 } else {
-                    functions.push(ChangeFunction {
+                    functions.push(ChangeItem {
                         name: prev_func.name.clone(),
                         from: Some(prev_func_info),
                         to: None,
@@ -430,7 +417,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
             }
             for curr_func in &curr_unit.functions {
                 if !prev_unit.functions.iter().any(|f| f.name == curr_func.name) {
-                    functions.push(ChangeFunction {
+                    functions.push(ChangeItem {
                         name: curr_func.name.clone(),
                         from: None,
                         to: Some(ChangeFunctionInfo::from(curr_func)),
@@ -439,7 +426,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
             }
         } else {
             for prev_func in &prev_unit.functions {
-                functions.push(ChangeFunction {
+                functions.push(ChangeItem {
                     name: prev_func.name.clone(),
                     from: Some(ChangeFunctionInfo::from(prev_func)),
                     to: None,
@@ -464,7 +451,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 functions: curr_unit
                     .functions
                     .iter()
-                    .map(|f| ChangeFunction {
+                    .map(|f| ChangeItem {
                         name: f.name.clone(),
                         from: None,
                         to: Some(ChangeFunctionInfo::from(f)),
