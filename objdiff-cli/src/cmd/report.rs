@@ -134,7 +134,7 @@ fn generate(args: GenerateArgs) -> Result<()> {
         // If deduplicating, we need to run single-threaded
         for object in &mut project.objects {
             if let Some(unit) = report_object(
-                object,
+ sdads               object,
                 project_dir,
                 project.target_dir.as_deref(),
                 project.base_dir.as_deref(),
