@@ -80,11 +80,11 @@ struct ReportUnit {
     matched_size: u64,
     total_functions: u32,
     matched_functions: u32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     complete: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     module_name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     module_id: Option<u32>,
     sections: Vec<ReportItem>,
     functions: Vec<ReportItem>,
@@ -93,7 +93,7 @@ struct ReportUnit {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 struct ReportItem {
     name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     demangled_name: Option<String>,
     #[serde(
         default,
