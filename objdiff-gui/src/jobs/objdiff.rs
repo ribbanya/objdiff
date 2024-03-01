@@ -35,23 +35,6 @@ impl Default for BuildStatus {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct BuildConfig {
-    pub project_dir: Option<PathBuf>,
-    pub custom_make: Option<String>,
-    pub selected_wsl_distro: Option<String>,
-}
-
-impl BuildConfig {
-    pub(crate) fn from_config(config: &AppConfig) -> Self {
-        Self {
-            project_dir: config.project_dir.clone(),
-            custom_make: config.custom_make.clone(),
-            selected_wsl_distro: config.selected_wsl_distro.clone(),
-        }
-    }
-}
-
 pub struct ObjDiffConfig {
     pub build_config: BuildConfig,
     pub build_base: bool,
