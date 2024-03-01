@@ -390,14 +390,16 @@ fn changes(args: ChangesArgs) -> Result<()> {
         units: vec![],
     };
     for prev_unit in &previous.units {
+        let prev_items = &prev_unit.functions;
         let prev_unit_info = ChangeInfo::from(prev_unit);
         let curr_unit = current.units.iter().find(|u| u.name == prev_unit.name);
         let curr_unit_info = curr_unit.map(ChangeInfo::from);
         let mut functions = vec![];
         if let Some(curr_unit) = curr_unit {
-            for prev_func in &prev_unit.functions {
+            let curr_items = &curr_unit.functions;
+            for prev_func in prev_items {
                 let prev_func_info = ChangeFunctionInfo::from(prev_func);
-                let curr_func = curr_unit.functions.iter().find(|f| f.name == prev_func.name);
+                let curr_func = curr_items.iter().find(|f| f.name == prev_func.name);
                 let curr_func_info = curr_func.map(ChangeFunctionInfo::from);
                 if let Some(curr_func_info) = curr_func_info {
                     if prev_func_info != curr_func_info {
@@ -415,7 +417,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
                     });
                 }
             }
-            for curr_func in &curr_unit.functions {
+            for curr_func in curr_items {
                 if !prev_unit.functions.iter().any(|f| f.name == curr_func.name) {
                     functions.push(ChangeItem {
                         name: curr_func.name.clone(),
@@ -425,7 +427,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 }
             }
         } else {
-            for prev_func in &prev_unit.functions {
+            for prev_func in prev_items {
                 functions.push(ChangeItem {
                     name: prev_func.name.clone(),
                     from: Some(ChangeFunctionInfo::from(prev_func)),
