@@ -359,6 +359,7 @@ struct ChangeUnit {
     name: String,
     from: Option<ChangeInfo>,
     to: Option<ChangeInfo>,
+    sections: Vec<ChangeItem>,
     functions: Vec<ChangeItem>,
 }
 
@@ -390,25 +391,21 @@ fn changes(args: ChangesArgs) -> Result<()> {
         units: vec![],
     };
     for prev_unit in &previous.units {
-        let prev_items = &prev_unit.functions;
         let curr_unit = current.units.iter().find(|u| u.name == prev_unit.name);
-        // foo(
-        //     &mut items,
-        //     prev_unit,
-        //     curr_unit,
-        //     &prev_unit.functions,
-        //     &curr_unit.map(|u| u.functions),
-        // );
+        let sections = foo(prev_unit, curr_unit, |u| &u.sections);
+        let functions = foo(prev_unit, curr_unit, |u| &u.functions);
 
-        // TODO
-        // if !items.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
-        //     changes.units.push(ChangeUnit {
-        //         name: prev_unit.name.clone(),
-        //         from: Some(prev_unit_info),
-        //         to: curr_unit_info,
-        //         functions: items,
-        //     });
-        // }
+        let prev_unit_info = ChangeInfo::from(prev_unit);
+        let curr_unit_info = curr_unit.map(ChangeInfo::from);
+        if !functions.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
+            changes.units.push(ChangeUnit {
+                name: prev_unit.name.clone(),
+                from: Some(prev_unit_info),
+                to: curr_unit_info,
+                sections,
+                functions,
+            });
+        }
         todo!()
     }
     for curr_unit in &current.units {
@@ -417,15 +414,8 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 name: curr_unit.name.clone(),
                 from: None,
                 to: Some(ChangeInfo::from(curr_unit)),
-                functions: curr_unit
-                    .functions
-                    .iter()
-                    .map(|f| ChangeItem {
-                        name: f.name.clone(),
-                        from: None,
-                        to: Some(ChangeItemInfo::from(f)),
-                    })
-                    .collect(),
+                sections: bar(&curr_unit.sections),
+                functions: bar(&curr_unit.functions),
             });
         }
     }
@@ -443,17 +433,15 @@ fn changes(args: ChangesArgs) -> Result<()> {
     Ok(())
 }
 
-fn foo<F: FnOnce(&ReportUnit) -> &Vec<ChangeItem>>(
-    items: &mut Vec<ChangeItem>,
+fn foo<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
     prev_unit: &ReportUnit,
     curr_unit: Option<&ReportUnit>,
     getter: F,
-) {
-    let prev_unit_info = ChangeInfo::from(prev_unit);
-    let curr_unit_info = curr_unit.map(ChangeInfo::from);
+) -> Vec<ChangeItem> {
     let prev_items = getter(prev_unit);
     let mut items = vec![];
     if let Some(curr_unit) = curr_unit {
+        let curr_items = getter(curr_unit);
         for prev_func in prev_items {
             let prev_func_info = ChangeItemInfo::from(prev_func);
             let curr_func = curr_items.iter().find(|f| f.name == prev_func.name);
@@ -492,6 +480,14 @@ fn foo<F: FnOnce(&ReportUnit) -> &Vec<ChangeItem>>(
             });
         }
     }
+    items
+}
+
+fn bar(items: &Vec<ReportItem>) -> Vec<ChangeItem> {
+    items
+        .iter()
+        .map(|f| ChangeItem { name: f.name.clone(), from: None, to: Some(ChangeItemInfo::from(f)) })
+        .collect()
 }
 
 fn read_report(path: &Path) -> Result<Report> {
