@@ -394,7 +394,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
         let prev_unit_info = ChangeInfo::from(prev_unit);
         let curr_unit = current.units.iter().find(|u| u.name == prev_unit.name);
         let curr_unit_info = curr_unit.map(ChangeInfo::from);
-        let mut functions = vec![];
+        let mut items = vec![];
         if let Some(curr_unit) = curr_unit {
             let curr_items = &curr_unit.functions;
             for prev_func in prev_items {
@@ -403,14 +403,14 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 let curr_func_info = curr_func.map(ChangeFunctionInfo::from);
                 if let Some(curr_func_info) = curr_func_info {
                     if prev_func_info != curr_func_info {
-                        functions.push(ChangeItem {
+                        items.push(ChangeItem {
                             name: prev_func.name.clone(),
                             from: Some(prev_func_info),
                             to: Some(curr_func_info),
                         });
                     }
                 } else {
-                    functions.push(ChangeItem {
+                    items.push(ChangeItem {
                         name: prev_func.name.clone(),
                         from: Some(prev_func_info),
                         to: None,
@@ -419,7 +419,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
             }
             for curr_func in curr_items {
                 if !prev_unit.functions.iter().any(|f| f.name == curr_func.name) {
-                    functions.push(ChangeItem {
+                    items.push(ChangeItem {
                         name: curr_func.name.clone(),
                         from: None,
                         to: Some(ChangeFunctionInfo::from(curr_func)),
@@ -428,19 +428,19 @@ fn changes(args: ChangesArgs) -> Result<()> {
             }
         } else {
             for prev_func in prev_items {
-                functions.push(ChangeItem {
+                items.push(ChangeItem {
                     name: prev_func.name.clone(),
                     from: Some(ChangeFunctionInfo::from(prev_func)),
                     to: None,
                 });
             }
         }
-        if !functions.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
+        if !items.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
             changes.units.push(ChangeUnit {
                 name: prev_unit.name.clone(),
                 from: Some(prev_unit_info),
                 to: curr_unit_info,
-                functions,
+                functions: items,
             });
         }
     }
