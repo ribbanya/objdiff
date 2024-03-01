@@ -365,17 +365,17 @@ struct ChangeUnit {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 struct ChangeItem {
     name: String,
-    from: Option<ChangeFunctionInfo>,
-    to: Option<ChangeFunctionInfo>,
+    from: Option<ChangeItemInfo>,
+    to: Option<ChangeItemInfo>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-struct ChangeFunctionInfo {
+struct ChangeItemInfo {
     fuzzy_match_percent: f32,
     size: u64,
 }
 
-impl From<&ReportItem> for ChangeFunctionInfo {
+impl From<&ReportItem> for ChangeItemInfo {
     fn from(value: &ReportItem) -> Self {
         Self { fuzzy_match_percent: value.fuzzy_match_percent, size: value.size }
     }
@@ -391,58 +391,25 @@ fn changes(args: ChangesArgs) -> Result<()> {
     };
     for prev_unit in &previous.units {
         let prev_items = &prev_unit.functions;
-        let prev_unit_info = ChangeInfo::from(prev_unit);
         let curr_unit = current.units.iter().find(|u| u.name == prev_unit.name);
-        let curr_unit_info = curr_unit.map(ChangeInfo::from);
-        let mut items = vec![];
-        if let Some(curr_unit) = curr_unit {
-            let curr_items = &curr_unit.functions;
-            for prev_func in prev_items {
-                let prev_func_info = ChangeFunctionInfo::from(prev_func);
-                let curr_func = curr_items.iter().find(|f| f.name == prev_func.name);
-                let curr_func_info = curr_func.map(ChangeFunctionInfo::from);
-                if let Some(curr_func_info) = curr_func_info {
-                    if prev_func_info != curr_func_info {
-                        items.push(ChangeItem {
-                            name: prev_func.name.clone(),
-                            from: Some(prev_func_info),
-                            to: Some(curr_func_info),
-                        });
-                    }
-                } else {
-                    items.push(ChangeItem {
-                        name: prev_func.name.clone(),
-                        from: Some(prev_func_info),
-                        to: None,
-                    });
-                }
-            }
-            for curr_func in curr_items {
-                if !prev_unit.functions.iter().any(|f| f.name == curr_func.name) {
-                    items.push(ChangeItem {
-                        name: curr_func.name.clone(),
-                        from: None,
-                        to: Some(ChangeFunctionInfo::from(curr_func)),
-                    });
-                }
-            }
-        } else {
-            for prev_func in prev_items {
-                items.push(ChangeItem {
-                    name: prev_func.name.clone(),
-                    from: Some(ChangeFunctionInfo::from(prev_func)),
-                    to: None,
-                });
-            }
-        }
-        if !items.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
-            changes.units.push(ChangeUnit {
-                name: prev_unit.name.clone(),
-                from: Some(prev_unit_info),
-                to: curr_unit_info,
-                functions: items,
-            });
-        }
+        // foo(
+        //     &mut items,
+        //     prev_unit,
+        //     curr_unit,
+        //     &prev_unit.functions,
+        //     &curr_unit.map(|u| u.functions),
+        // );
+
+        // TODO
+        // if !items.is_empty() || !matches!(&curr_unit_info, Some(v) if v == &prev_unit_info) {
+        //     changes.units.push(ChangeUnit {
+        //         name: prev_unit.name.clone(),
+        //         from: Some(prev_unit_info),
+        //         to: curr_unit_info,
+        //         functions: items,
+        //     });
+        // }
+        todo!()
     }
     for curr_unit in &current.units {
         if !previous.units.iter().any(|u| u.name == curr_unit.name) {
@@ -456,7 +423,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
                     .map(|f| ChangeItem {
                         name: f.name.clone(),
                         from: None,
-                        to: Some(ChangeFunctionInfo::from(f)),
+                        to: Some(ChangeItemInfo::from(f)),
                     })
                     .collect(),
             });
@@ -474,6 +441,57 @@ fn changes(args: ChangesArgs) -> Result<()> {
         serde_json::to_writer_pretty(std::io::stdout(), &changes)?;
     }
     Ok(())
+}
+
+fn foo<F: FnOnce(&ReportUnit) -> &Vec<ChangeItem>>(
+    items: &mut Vec<ChangeItem>,
+    prev_unit: &ReportUnit,
+    curr_unit: Option<&ReportUnit>,
+    getter: F,
+) {
+    let prev_unit_info = ChangeInfo::from(prev_unit);
+    let curr_unit_info = curr_unit.map(ChangeInfo::from);
+    let prev_items = getter(prev_unit);
+    let mut items = vec![];
+    if let Some(curr_unit) = curr_unit {
+        for prev_func in prev_items {
+            let prev_func_info = ChangeItemInfo::from(prev_func);
+            let curr_func = curr_items.iter().find(|f| f.name == prev_func.name);
+            let curr_func_info = curr_func.map(ChangeItemInfo::from);
+            if let Some(curr_func_info) = curr_func_info {
+                if prev_func_info != curr_func_info {
+                    items.push(ChangeItem {
+                        name: prev_func.name.clone(),
+                        from: Some(prev_func_info),
+                        to: Some(curr_func_info),
+                    });
+                }
+            } else {
+                items.push(ChangeItem {
+                    name: prev_func.name.clone(),
+                    from: Some(prev_func_info),
+                    to: None,
+                });
+            }
+        }
+        for curr_func in curr_items {
+            if !prev_items.iter().any(|f| f.name == curr_func.name) {
+                items.push(ChangeItem {
+                    name: curr_func.name.clone(),
+                    from: None,
+                    to: Some(ChangeItemInfo::from(curr_func)),
+                });
+            }
+        }
+    } else {
+        for prev_func in prev_items {
+            items.push(ChangeItem {
+                name: prev_func.name.clone(),
+                from: Some(ChangeItemInfo::from(prev_func)),
+                to: None,
+            });
+        }
+    }
 }
 
 fn read_report(path: &Path) -> Result<Report> {
