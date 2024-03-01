@@ -392,8 +392,8 @@ fn changes(args: ChangesArgs) -> Result<()> {
     };
     for prev_unit in &previous.units {
         let curr_unit = current.units.iter().find(|u| u.name == prev_unit.name);
-        let sections = foo(prev_unit, curr_unit, |u| &u.sections);
-        let functions = foo(prev_unit, curr_unit, |u| &u.functions);
+        let sections = process_items(prev_unit, curr_unit, |u| &u.sections);
+        let functions = process_items(prev_unit, curr_unit, |u| &u.functions);
 
         let prev_unit_info = ChangeInfo::from(prev_unit);
         let curr_unit_info = curr_unit.map(ChangeInfo::from);
@@ -406,7 +406,6 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 functions,
             });
         }
-        todo!()
     }
     for curr_unit in &current.units {
         if !previous.units.iter().any(|u| u.name == curr_unit.name) {
@@ -414,8 +413,8 @@ fn changes(args: ChangesArgs) -> Result<()> {
                 name: curr_unit.name.clone(),
                 from: None,
                 to: Some(ChangeInfo::from(curr_unit)),
-                sections: bar(&curr_unit.sections),
-                functions: bar(&curr_unit.functions),
+                sections: process_new_items(&curr_unit.sections),
+                functions: process_new_items(&curr_unit.functions),
             });
         }
     }
@@ -433,7 +432,7 @@ fn changes(args: ChangesArgs) -> Result<()> {
     Ok(())
 }
 
-fn foo<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
+fn process_items<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
     prev_unit: &ReportUnit,
     curr_unit: Option<&ReportUnit>,
     getter: F,
@@ -483,7 +482,7 @@ fn foo<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
     items
 }
 
-fn bar(items: &Vec<ReportItem>) -> Vec<ChangeItem> {
+fn process_new_items(items: &Vec<ReportItem>) -> Vec<ChangeItem> {
     items
         .iter()
         .map(|f| ChangeItem { name: f.name.clone(), from: None, to: Some(ChangeItemInfo::from(f)) })
