@@ -258,6 +258,7 @@ fn report_object(
         .map_or(&vec![], |o| &o.sections)
         .into_iter()
         .chain(base.as_ref().map_or(&vec![], |o| &o.sections))
+        .filter(|o| o.match_percent != 0.0)
     {
         println!("{}: {}", section.name, section.match_percent);
     }
