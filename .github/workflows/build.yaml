@@ -151,6 +151,7 @@ jobs:
       - name: Rename artifacts
         working-directory: artifacts
         run: |
+          tree
           mkdir ../out
           for i in */*/$BUILD_PROFILE/objdiff-cli*; do
             mv "$i" "../out/$(sed -E "s/([^/]+)\/[^/]+\/$BUILD_PROFILE\/objdiff-cli/objdiff-cli-\1/" <<< "$i")"
