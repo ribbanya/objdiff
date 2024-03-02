@@ -256,7 +256,7 @@ fn report_object(
     for section in target
         .as_ref()
         .map_or(&vec![], |o| &o.sections)
-        .into_iter()
+        .iter()
         .chain(base.as_ref().map_or(&vec![], |o| &o.sections))
         .filter(|o| o.match_percent != 0.0)
     {
