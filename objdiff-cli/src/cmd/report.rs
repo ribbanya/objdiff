@@ -252,6 +252,16 @@ fn report_object(
         ..Default::default()
     };
     let obj = target.as_ref().or(base.as_ref()).unwrap();
+
+    for section in target
+        .as_ref()
+        .map_or(&vec![], |o| &o.sections)
+        .into_iter()
+        .chain(base.as_ref().map_or(&vec![], |o| &o.sections))
+    {
+        println!("{}: {}", section.name, section.match_percent);
+    }
+
     for section in &obj.sections {
         unit.sections.push(ReportItem {
             name: section.name.clone(),
@@ -264,6 +274,7 @@ fn report_object(
         match section.kind {
             ObjSectionKind::Data | ObjSectionKind::Bss => {
                 unit.total_data += section.size;
+                // section.data_diff
                 if section.match_percent == 100.0 {
                     unit.matched_data += section.size;
                 }
@@ -529,7 +540,9 @@ fn read_report(path: &Path) -> Result<Report> {
 }
 
 fn serialize_hex<S>(x: &Option<u64>, s: S) -> Result<S::Ok, S::Error>
-where S: serde::Serializer {
+where
+    S: serde::Serializer,
+{
     if let Some(x) = x {
         s.serialize_str(&format!("{:#X}", x))
     } else {
@@ -538,7 +551,9 @@ where S: serde::Serializer {
 }
 
 fn deserialize_hex<'de, D>(d: D) -> Result<Option<u64>, D::Error>
-where D: serde::Deserializer<'de> {
+where
+    D: serde::Deserializer<'de>,
+{
     use serde::Deserialize;
     let s = String::deserialize(d)?;
     if s.is_empty() {
