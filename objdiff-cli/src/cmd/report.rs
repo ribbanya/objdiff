@@ -176,10 +176,16 @@ fn generate(args: GenerateArgs) -> Result<()> {
     } else {
         report.fuzzy_match_percent /= report.total_code as f32;
     }
+
     report.matched_code_percent = if report.total_code == 0 {
         100.0
     } else {
         report.matched_code as f32 / report.total_code as f32 * 100.0
+    };
+    report.matched_data_percent = if report.total_data == 0 {
+        100.0
+    } else {
+        report.matched_data as f32 / report.total_data as f32 * 100.0
     };
     report.matched_functions_percent = if report.total_functions == 0 {
         100.0
@@ -221,7 +227,6 @@ fn report_object(
         }
         _ => {}
     }
-    // println!("Checking {}", object.name());
     let mut target = object
         .target_path
         .as_ref()
@@ -254,8 +259,15 @@ fn report_object(
             address: section.virtual_address,
         });
 
-        if section.kind != ObjSectionKind::Code {
-            continue;
+        match section.kind {
+            ObjSectionKind::Data | ObjSectionKind::Bss => {
+                unit.total_data += section.size;
+                if section.match_percent == 100.0 {
+                    unit.matched_data += section.size;
+                }
+                continue;
+            }
+            ObjSectionKind::Code => (),
         }
 
         for symbol in &section.symbols {
@@ -333,6 +345,9 @@ impl From<&Report> for ChangeInfo {
             total_code: report.total_code,
             matched_code: report.matched_code,
             matched_code_percent: report.matched_code_percent,
+            total_data: report.total_data,
+            matched_data: report.matched_data,
+            matched_data_percent: report.matched_data_percent,
             total_functions: report.total_functions,
             matched_functions: report.matched_functions,
             matched_functions_percent: report.matched_functions_percent,
@@ -351,6 +366,9 @@ impl From<&ReportUnit> for ChangeInfo {
             } else {
                 value.matched_code as f32 / value.total_code as f32 * 100.0
             },
+            total_data: value.total_data,
+            matched_data: value.matched_data,
+            matched_data_percent: todo!(),
             total_functions: value.total_functions,
             matched_functions: value.matched_functions,
             matched_functions_percent: if value.total_functions == 0 {
@@ -505,7 +523,9 @@ fn read_report(path: &Path) -> Result<Report> {
 }
 
 fn serialize_hex<S>(x: &Option<u64>, s: S) -> Result<S::Ok, S::Error>
-where S: serde::Serializer {
+where
+    S: serde::Serializer,
+{
     if let Some(x) = x {
         s.serialize_str(&format!("{:#X}", x))
     } else {
@@ -514,7 +534,9 @@ where S: serde::Serializer {
 }
 
 fn deserialize_hex<'de, D>(d: D) -> Result<Option<u64>, D::Error>
-where D: serde::Deserializer<'de> {
+where
+    D: serde::Deserializer<'de>,
+{
     use serde::Deserialize;
     let s = String::deserialize(d)?;
     if s.is_empty() {
