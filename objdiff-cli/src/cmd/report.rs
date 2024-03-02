@@ -63,9 +63,12 @@ pub struct ChangesArgs {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 struct Report {
     fuzzy_match_percent: f32,
-    total_size: u64,
-    matched_size: u64,
-    matched_size_percent: f32,
+    total_code: u64,
+    matched_code: u64,
+    matched_code_percent: f32,
+    total_data: u64,
+    matched_data: u64,
+    matched_data_percent: f32,
     total_functions: u32,
     matched_functions: u32,
     matched_functions_percent: f32,
@@ -76,8 +79,10 @@ struct Report {
 struct ReportUnit {
     name: String,
     fuzzy_match_percent: f32,
-    total_size: u64,
-    matched_size: u64,
+    total_code: u64,
+    matched_code: u64,
+    total_data: u64,
+    matched_data: u64,
     total_functions: u32,
     matched_functions: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -160,21 +165,21 @@ fn generate(args: GenerateArgs) -> Result<()> {
         report.units = units.into_iter().flatten().collect();
     }
     for unit in &report.units {
-        report.fuzzy_match_percent += unit.fuzzy_match_percent * unit.total_size as f32;
-        report.total_size += unit.total_size;
-        report.matched_size += unit.matched_size;
+        report.fuzzy_match_percent += unit.fuzzy_match_percent * unit.total_code as f32;
+        report.total_code += unit.total_code;
+        report.matched_code += unit.matched_code;
         report.total_functions += unit.total_functions;
         report.matched_functions += unit.matched_functions;
     }
-    if report.total_size == 0 {
+    if report.total_code == 0 {
         report.fuzzy_match_percent = 100.0;
     } else {
-        report.fuzzy_match_percent /= report.total_size as f32;
+        report.fuzzy_match_percent /= report.total_code as f32;
     }
-    report.matched_size_percent = if report.total_size == 0 {
+    report.matched_code_percent = if report.total_code == 0 {
         100.0
     } else {
-        report.matched_size as f32 / report.total_size as f32 * 100.0
+        report.matched_code as f32 / report.total_code as f32 * 100.0
     };
     report.matched_functions_percent = if report.total_functions == 0 {
         100.0
@@ -275,9 +280,9 @@ fn report_object(
                 }
             });
             unit.fuzzy_match_percent += match_percent * symbol.size as f32;
-            unit.total_size += symbol.size;
+            unit.total_code += symbol.size;
             if match_percent == 100.0 {
-                unit.matched_size += symbol.size;
+                unit.matched_code += symbol.size;
             }
             unit.functions.push(ReportItem {
                 name: symbol.name.clone(),
@@ -292,10 +297,10 @@ fn report_object(
             unit.total_functions += 1;
         }
     }
-    if unit.total_size == 0 {
+    if unit.total_code == 0 {
         unit.fuzzy_match_percent = 100.0;
     } else {
-        unit.fuzzy_match_percent /= unit.total_size as f32;
+        unit.fuzzy_match_percent /= unit.total_code as f32;
     }
     Ok(Some(unit))
 }
@@ -310,9 +315,12 @@ struct Changes {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 struct ChangeInfo {
     fuzzy_match_percent: f32,
-    total_size: u64,
-    matched_size: u64,
-    matched_size_percent: f32,
+    total_code: u64,
+    matched_code: u64,
+    matched_code_percent: f32,
+    total_data: u64,
+    matched_data: u64,
+    matched_data_percent: f32,
     total_functions: u32,
     matched_functions: u32,
     matched_functions_percent: f32,
@@ -322,9 +330,9 @@ impl From<&Report> for ChangeInfo {
     fn from(report: &Report) -> Self {
         Self {
             fuzzy_match_percent: report.fuzzy_match_percent,
-            total_size: report.total_size,
-            matched_size: report.matched_size,
-            matched_size_percent: report.matched_size_percent,
+            total_code: report.total_code,
+            matched_code: report.matched_code,
+            matched_code_percent: report.matched_code_percent,
             total_functions: report.total_functions,
             matched_functions: report.matched_functions,
             matched_functions_percent: report.matched_functions_percent,
@@ -336,12 +344,12 @@ impl From<&ReportUnit> for ChangeInfo {
     fn from(value: &ReportUnit) -> Self {
         Self {
             fuzzy_match_percent: value.fuzzy_match_percent,
-            total_size: value.total_size,
-            matched_size: value.matched_size,
-            matched_size_percent: if value.total_size == 0 {
+            total_code: value.total_code,
+            matched_code: value.matched_code,
+            matched_code_percent: if value.total_code == 0 {
                 100.0
             } else {
-                value.matched_size as f32 / value.total_size as f32 * 100.0
+                value.matched_code as f32 / value.total_code as f32 * 100.0
             },
             total_functions: value.total_functions,
             matched_functions: value.matched_functions,
