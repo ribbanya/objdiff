@@ -168,6 +168,8 @@ fn generate(args: GenerateArgs) -> Result<()> {
         report.fuzzy_match_percent += unit.fuzzy_match_percent * unit.total_code as f32;
         report.total_code += unit.total_code;
         report.matched_code += unit.matched_code;
+        report.total_data += unit.total_data;
+        report.matched_data += unit.matched_data;
         report.total_functions += unit.total_functions;
         report.matched_functions += unit.matched_functions;
     }
@@ -368,7 +370,11 @@ impl From<&ReportUnit> for ChangeInfo {
             },
             total_data: value.total_data,
             matched_data: value.matched_data,
-            matched_data_percent: todo!(),
+            matched_data_percent: if value.total_data == 0 {
+                100.0
+            } else {
+                value.matched_data as f32 / value.total_data as f32 * 100.0
+            },
             total_functions: value.total_functions,
             matched_functions: value.matched_functions,
             matched_functions_percent: if value.total_functions == 0 {
