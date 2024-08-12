@@ -491,12 +491,12 @@ fn process_items<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
         let curr_items = getter(curr_unit);
         for prev_func in prev_items {
             let prev_func_info = ChangeItemInfo::from(prev_func);
-            let curr_func = curr_items.iter().find(|f| f.name == prev_func.name);
+            let curr_func = curr_items.iter().find(|f| f.address == prev_func.address);
             let curr_func_info = curr_func.map(ChangeItemInfo::from);
             if let Some(curr_func_info) = curr_func_info {
                 if prev_func_info != curr_func_info {
                     items.push(ChangeItem {
-                        name: prev_func.name.clone(),
+                        name: curr_func.unwrap_or(prev_func).name.clone(),
                         from: Some(prev_func_info),
                         to: Some(curr_func_info),
                     });
@@ -510,7 +510,7 @@ fn process_items<F: Fn(&ReportUnit) -> &Vec<ReportItem>>(
             }
         }
         for curr_func in curr_items {
-            if !prev_items.iter().any(|f| f.name == curr_func.name) {
+            if !prev_items.iter().any(|f| f.address == curr_func.address) {
                 items.push(ChangeItem {
                     name: curr_func.name.clone(),
                     from: None,
